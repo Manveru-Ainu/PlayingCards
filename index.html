@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Room — Solitaire &amp; Poker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Karla:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  :root{
+    --felt-1:#0c4a37;--felt-2:#08382a;--felt-edge:#062a20;
+    --ivory:#fbf7ea;--ivory-edge:#e7dfc4;--red:#b11226;--black:#16150f;
+    --gold:#d4af37;--gold-soft:#caa84a;--cream:#f4ecd6;--cream-dim:#cdc2a3;
+    --cw:96px;--ch:134px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Karla',system-ui,sans-serif;color:var(--cream);
+    background:radial-gradient(ellipse at 50% 16%,#11614a 0%,var(--felt-1) 38%,var(--felt-2) 80%,var(--felt-edge) 100%);
+    min-height:100vh;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+    mix-blend-mode:overlay;opacity:.6}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:26px 18px 70px}
+  .screen{display:none}.screen.show{display:block}
+
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .back-btn{font-family:'Karla',sans-serif;font-weight:700;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;border:1px solid rgba(212,175,55,.45);background:rgba(0,0,0,.25);color:var(--cream);border-radius:10px;padding:8px 14px;cursor:pointer}
+  .back-btn:hover{background:rgba(0,0,0,.42)}
+
+  header{text-align:center;padding:6px 0 8px}
+  .eyebrow{font-size:.7rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold-soft);font-weight:700;margin-bottom:8px}
+  h1{font-family:'DM Serif Display',serif;font-size:clamp(1.9rem,5vw,3rem);line-height:1;color:var(--ivory);text-shadow:0 2px 16px rgba(0,0,0,.4)}
+  h1 .swatch{color:var(--gold)}
+
+  /* ---- Home menu ---- */
+  .home{text-align:center;padding-top:30px}
+  .home h1{font-size:clamp(2.4rem,7vw,4.2rem)}
+  .home .lead{color:var(--cream-dim);font-style:italic;margin:14px 0 40px;font-size:1.05rem}
+  .menu{display:flex;gap:26px;justify-content:center;flex-wrap:wrap}
+  .menu-card{width:260px;background:linear-gradient(165deg,rgba(255,255,255,.07),rgba(0,0,0,.18));border:1px solid rgba(212,175,55,.3);border-radius:18px;padding:30px 26px;cursor:pointer;transition:.2s;text-align:center}
+  .menu-card:hover{transform:translateY(-6px);border-color:var(--gold);box-shadow:0 16px 34px rgba(0,0,0,.4)}
+  .menu-card .ic{font-size:3rem;color:var(--gold)}
+  .menu-card h3{font-family:'DM Serif Display',serif;font-size:1.7rem;color:var(--ivory);margin:10px 0 8px}
+  .menu-card p{color:var(--cream-dim);font-size:.92rem;line-height:1.45}
+  .submenu{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .submenu .menu-card{width:230px;padding:26px 22px}
+
+  /* ---- Buttons ---- */
+  .btn{font-family:'Karla',sans-serif;font-weight:700;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;border-radius:10px;padding:10px 16px;cursor:pointer;transition:.16s;border:1px solid rgba(212,175,55,.45);background:rgba(0,0,0,.25);color:var(--cream)}
+  .btn:hover{background:rgba(0,0,0,.42)}
+  .btn.gold{background:var(--gold);color:#23200f;border-color:var(--gold)}
+  .btn.gold:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .seg{display:inline-flex;background:rgba(0,0,0,.28);border:1px solid rgba(212,175,55,.35);border-radius:999px;padding:3px}
+  .seg button{font-family:'Karla',sans-serif;font-weight:700;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cream-dim);background:none;border:none;padding:8px 14px;border-radius:999px;cursor:pointer}
+  .seg button.active{background:var(--gold);color:#23200f}
+
+  /* ---- Shared card ---- */
+  .pcard{width:var(--cw);height:var(--ch);border-radius:10px;font-size:calc(var(--cw)*.165);user-select:none}
+  .sol .pcard,.sol-slot .pcard{position:absolute;left:0}
+  .pcard.pk{position:relative;display:inline-block;vertical-align:bottom}
+  .face{background:linear-gradient(150deg,var(--ivory),#f3ecd6);border:1px solid var(--ivory-edge);box-shadow:0 3px 7px rgba(0,0,0,.28),inset 0 0 0 2px rgba(255,255,255,.5);cursor:pointer;overflow:hidden}
+  .face.dim{cursor:default}
+  .back{cursor:pointer;border:1px solid #3a0a14;background-color:#7a1322;border-radius:10px;
+    background-image:repeating-linear-gradient(45deg,rgba(212,175,55,.32) 0 2px,transparent 2px 13px),repeating-linear-gradient(-45deg,rgba(212,175,55,.32) 0 2px,transparent 2px 13px),radial-gradient(circle at 50% 50%,rgba(0,0,0,.25),transparent 70%);
+    box-shadow:inset 0 0 0 3px rgba(212,175,55,.5)}
+  .back::after{content:"♦";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(212,175,55,.55);font-size:calc(var(--cw)*.34)}
+  .pcard{position:relative}
+  .corner{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:.9;font-weight:700}
+  .corner.tl{top:5px;left:6px}.corner.br{bottom:5px;right:6px;transform:rotate(180deg)}
+  .corner .r{font-size:1em}.corner .s{font-size:.9em}
+  .pips{position:absolute;inset:18% 13%}
+  .pip{position:absolute;transform:translate(-50%,-50%);font-size:1.05em;line-height:1}
+  .pip.flip{transform:translate(-50%,-50%) rotate(180deg)}
+  .center-big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2.7em}
+  .face.court .court-frame{position:absolute;inset:13% 12%;border:1.5px solid rgba(0,0,0,.18);border-radius:6px;display:flex;align-items:center;justify-content:center}
+  .court-frame .letter{font-family:'DM Serif Display',serif;font-size:2.4em}
+  .red-suit{color:var(--red)}.black-suit{color:var(--black)}
+  .pcard.sel{box-shadow:0 0 0 3px var(--gold),0 8px 18px rgba(0,0,0,.45);transform:translateY(-3px);z-index:50}
+  .legalring{box-shadow:0 0 0 3px var(--gold),0 0 16px rgba(212,175,55,.4)!important}
+
+  /* ---- Solitaire layout ---- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;margin:14px 0 8px}
+  .stats{display:flex;gap:26px;justify-content:center;margin:6px 0 12px;color:var(--cream-dim);font-size:.86rem}
+  .stats b{color:var(--gold)}
+  .status{text-align:center;min-height:22px;color:var(--cream-dim);font-style:italic;font-size:.95rem;margin-bottom:14px}
+  .status .nm{color:var(--gold-soft);font-style:normal;font-weight:700}
+  .boardscroll{overflow-x:auto;padding-bottom:8px}
+  .board{min-width:756px;margin:0 auto;width:max-content}
+  .toprow{display:flex;justify-content:space-between;margin-bottom:22px}
+  .group{display:flex;gap:14px}.tableau{display:flex;gap:14px}
+  .col,.sol-slot{width:var(--cw);position:relative}
+  .sol-slot{height:var(--ch)}.col{min-height:var(--ch)}
+  .placeholder{position:absolute;inset:0;width:var(--cw);height:var(--ch);border-radius:10px;border:2px dashed rgba(212,175,55,.4);display:flex;align-items:center;justify-content:center;color:rgba(212,175,55,.45);font-size:2rem;background:rgba(0,0,0,.12)}
+  .placeholder.tap{cursor:pointer}
+  .placeholder.legal{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,.3) inset,0 0 16px rgba(212,175,55,.35)}
+
+  /* ---- Poker layout ---- */
+  #screen-poker{--cw:78px;--ch:109px}
+  .pk-table{background:radial-gradient(ellipse at 50% 42%,#15795c 0%,#0d5742 55%,#0a4232 100%);border:3px solid rgba(212,175,55,.4);border-radius:120px/70px;padding:22px 26px 26px;margin:10px auto 0;max-width:880px;box-shadow:inset 0 0 60px rgba(0,0,0,.4),0 14px 40px rgba(0,0,0,.4)}
+  .opp-row{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;min-height:150px}
+  .seat{text-align:center;width:150px}
+  .seat .who{font-weight:700;color:var(--cream);font-size:.92rem;margin-bottom:4px}
+  .seat .who .dealer{display:inline-block;width:18px;height:18px;line-height:18px;border-radius:50%;background:var(--gold);color:#23200f;font-size:.7rem;font-weight:700;margin-left:5px}
+  .seat .stack{color:var(--gold-soft);font-size:.82rem}
+  .seat .cards{display:flex;gap:4px;justify-content:center;margin:6px 0 4px;min-height:var(--ch)}
+  .seat .bet{font-size:.8rem;color:var(--cream-dim);min-height:18px}
+  .seat .bet b{color:var(--gold)}
+  .seat.active{outline:2px solid var(--gold);outline-offset:6px;border-radius:14px}
+  .seat.folded{opacity:.4}
+  .community{display:flex;gap:8px;justify-content:center;align-items:center;margin:14px 0;min-height:var(--ch)}
+  .pot{text-align:center;font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--gold);margin-bottom:8px}
+  .pk-msg{text-align:center;color:var(--cream-dim);font-style:italic;min-height:22px;margin:6px 0}
+  .pk-msg .nm{color:var(--gold-soft);font-style:normal;font-weight:700}
+  .me-seat{margin-top:4px;text-align:center}
+  .actionbar{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:14px;min-height:46px}
+  .raise-ctl{display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,.25);border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:5px 8px}
+  .raise-ctl input{width:120px}
+  .raise-ctl .amt{color:var(--gold);font-weight:700;min-width:48px;text-align:center}
+
+  /* ---- Lobby ---- */
+  .lobby{max-width:520px;margin:20px auto 0;background:linear-gradient(165deg,rgba(255,255,255,.06),rgba(0,0,0,.16));border:1px solid rgba(212,175,55,.3);border-radius:18px;padding:26px}
+  .lobby h3{font-family:'DM Serif Display',serif;color:var(--ivory);font-size:1.5rem;margin-bottom:14px;text-align:center}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-soft);font-weight:700}
+  .field input{font-family:'Karla',sans-serif;background:rgba(0,0,0,.3);color:var(--cream);border:1px solid rgba(212,175,55,.4);border-radius:10px;padding:11px 13px;font-size:1rem}
+  .roomcode{text-align:center;margin:10px 0}
+  .roomcode .code{font-family:'DM Serif Display',serif;font-size:2.4rem;letter-spacing:.3em;color:var(--gold)}
+  .playerlist{list-style:none;margin:12px 0}
+  .playerlist li{padding:9px 12px;background:rgba(0,0,0,.2);border-radius:8px;margin-bottom:6px;display:flex;justify-content:space-between}
+  .playerlist li .tag{color:var(--gold-soft);font-size:.78rem}
+  .lobby-actions{display:flex;gap:10px;justify-content:center;margin-top:8px}
+  .note{color:var(--cream-dim);font-size:.85rem;text-align:center;margin-top:10px}
+
+  /* ---- Win overlay ---- */
+  .overlay{position:fixed;inset:0;z-index:60;background:rgba(4,20,15,.85);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:20px}
+  .overlay.show{display:flex}
+  .winpanel{background:linear-gradient(165deg,#0f5340,#0a3f30);border:1px solid rgba(212,175,55,.5);border-radius:22px;padding:36px 40px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.55);max-width:440px;animation:rise .3s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+  .winpanel h2{font-family:'DM Serif Display',serif;font-size:2.4rem;color:var(--gold)}
+  .winpanel p{color:var(--cream-dim);margin:12px 0 22px;font-size:1.05rem}.winpanel p b{color:var(--ivory)}
+  .confetti{position:fixed;width:10px;height:14px;top:-20px;z-index:55;border-radius:2px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.9}}
+  footer{margin-top:40px;text-align:center;color:var(--cream-dim);font-size:.78rem;border-top:1px solid rgba(212,175,55,.2);padding-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== HOME ===== -->
+  <div id="screen-home" class="screen show">
+    <div class="home">
+      <div class="eyebrow">Bilingual Card Room</div>
+      <h1>The <span class="swatch">Card Room</span></h1>
+      <p class="lead">Choose a game. All in English — built for the classroom.</p>
+      <div class="menu">
+        <div class="menu-card" id="goSolitaire">
+          <div class="ic">♠</div><h3>Solitaire</h3>
+          <p>Classic Klondike. Build the four foundations from Ace to King. Play on your own.</p>
+        </div>
+        <div class="menu-card" id="goPoker">
+          <div class="ic">♥</div><h3>Poker</h3>
+          <p>Texas Hold'em. Play against the computer, or online with your classmates.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SOLITAIRE ===== -->
+  <div id="screen-sol" class="screen sol">
+    <div class="topbar"><button class="back-btn" data-home>← Menu</button></div>
+    <header><div class="eyebrow">Klondike · Patience</div><h1>Card Room <span class="swatch">Solitaire</span></h1></header>
+    <div class="toolbar">
+      <button class="btn gold" id="sol-new">New Game</button>
+      <button class="btn" id="sol-undo">↶ Undo</button>
+      <button class="btn" id="sol-auto" disabled>✦ Auto-Finish</button>
+      <div class="seg"><button id="sol-d1" class="active">Draw 1</button><button id="sol-d3">Draw 3</button></div>
+      <button class="btn" id="sol-hint">Hint</button>
+    </div>
+    <div class="stats"><span>Moves: <b id="sol-moves">0</b></span><span>Time: <b id="sol-time">0:00</b></span><span>Foundations: <b id="sol-found">0</b>/52</span></div>
+    <div class="status" id="sol-status"></div>
+    <div class="boardscroll"><div class="board">
+      <div class="toprow">
+        <div class="group"><div class="sol-slot" id="sol-stock"></div><div class="sol-slot" id="sol-waste"></div></div>
+        <div class="group" id="sol-foundations"></div>
+      </div>
+      <div class="tableau" id="sol-tableau"></div>
+    </div></div>
+  </div>
+
+  <!-- ===== POKER MENU ===== -->
+  <div id="screen-pmenu" class="screen">
+    <div class="topbar"><button class="back-btn" data-home>← Menu</button></div>
+    <header><div class="eyebrow">Texas Hold'em</div><h1>Choose a <span class="swatch">Poker</span> Mode</h1></header>
+    <div class="submenu">
+      <div class="menu-card" id="goCpu"><div class="ic">🤖</div><h3>vs Computer</h3><p>Play Texas Hold'em against computer opponents at your own pace.</p></div>
+      <div class="menu-card" id="goOnline"><div class="ic">🌐</div><h3>Online Multiplayer</h3><p>Create a room and share the code, or join a classmate's room.</p></div>
+    </div>
+    <div id="cpu-setup" style="display:none;max-width:420px;margin:26px auto 0;text-align:center">
+      <div class="field" style="text-align:left"><label>Opponents</label>
+        <div class="seg" style="align-self:center"><button data-bots="1">1</button><button data-bots="2" class="active">2</button><button data-bots="3">3</button></div>
+      </div>
+      <button class="btn gold" id="cpu-start" style="margin-top:8px">Deal me in</button>
+    </div>
+    <div id="online-setup" style="display:none">
+      <div class="lobby">
+        <h3>Online Multiplayer</h3>
+        <div class="field"><label>Your name</label><input id="mp-name" maxlength="14" placeholder="e.g. Manveru"></div>
+        <div class="lobby-actions">
+          <button class="btn gold" id="mp-create">Create Room</button>
+          <button class="btn" id="mp-join">Join Room</button>
+        </div>
+        <div id="mp-join-box" style="display:none;margin-top:14px">
+          <div class="field"><label>Room code</label><input id="mp-code" maxlength="4" placeholder="ABCD" style="text-transform:uppercase;letter-spacing:.3em;text-align:center"></div>
+          <div class="lobby-actions"><button class="btn gold" id="mp-join-go">Join</button></div>
+        </div>
+        <p class="note" id="mp-note">Peer-to-peer — no server needed. Everyone must keep this tab open.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ONLINE LOBBY (waiting) ===== -->
+  <div id="screen-lobby" class="screen">
+    <div class="topbar"><button class="back-btn" id="lobby-leave">← Leave</button></div>
+    <header><div class="eyebrow">Online Room</div><h1>Game <span class="swatch">Lobby</span></h1></header>
+    <div class="lobby">
+      <div class="roomcode" id="lobby-code-box">Room code<div class="code" id="lobby-code">····</div></div>
+      <ul class="playerlist" id="lobby-players"></ul>
+      <div class="lobby-actions"><button class="btn gold" id="lobby-start" style="display:none">Start Game</button></div>
+      <p class="note" id="lobby-note">Waiting for players to join…</p>
+    </div>
+  </div>
+
+  <!-- ===== POKER TABLE ===== -->
+  <div id="screen-poker" class="screen">
+    <div class="topbar"><button class="back-btn" data-home id="poker-leave">← Menu</button></div>
+    <header><div class="eyebrow" id="poker-eyebrow">Texas Hold'em · vs Computer</div></header>
+    <div class="pk-table">
+      <div class="opp-row" id="pk-opps"></div>
+      <div class="pot" id="pk-pot">Pot: 0</div>
+      <div class="community" id="pk-community"></div>
+      <div class="pk-msg" id="pk-msg"></div>
+      <div class="me-seat" id="pk-me"></div>
+    </div>
+    <div class="actionbar" id="pk-actions"></div>
+  </div>
+
+  <footer>The Card Room · classroom English games · Solitaire &amp; Texas Hold'em</footer>
+</div>
+
+<!-- Win / result overlay (shared) -->
+<div class="overlay" id="overlay"><div class="winpanel" id="winpanel"></div></div>
+
+<script>
+/* ============================================================
+   SHARED CARD DATA + RENDERING
+   ============================================================ */
+const SUITS=[{name:'Hearts',sym:'♥',color:'red'},{name:'Diamonds',sym:'♦',color:'red'},{name:'Clubs',sym:'♣',color:'black'},{name:'Spades',sym:'♠',color:'black'}];
+const RANKS=[{v:'A',name:'Ace',kind:'ace'},{v:'2',name:'Two',kind:'num'},{v:'3',name:'Three',kind:'num'},{v:'4',name:'Four',kind:'num'},{v:'5',name:'Five',kind:'num'},{v:'6',name:'Six',kind:'num'},{v:'7',name:'Seven',kind:'num'},{v:'8',name:'Eight',kind:'num'},{v:'9',name:'Nine',kind:'num'},{v:'10',name:'Ten',kind:'num'},{v:'J',name:'Jack',kind:'face'},{v:'Q',name:'Queen',kind:'face'},{v:'K',name:'King',kind:'face'}];
+const PIPS={'2':[[50,16],[50,84]],'3':[[50,16],[50,50],[50,84]],'4':[[28,16],[72,16],[28,84],[72,84]],'5':[[28,16],[72,16],[50,50],[28,84],[72,84]],'6':[[28,16],[72,16],[28,50],[72,50],[28,84],[72,84]],'7':[[28,16],[72,16],[50,33],[28,50],[72,50],[28,84],[72,84]],'8':[[28,16],[72,16],[50,33],[28,50],[72,50],[50,67],[28,84],[72,84]],'9':[[28,14],[72,14],[28,38],[72,38],[50,50],[28,62],[72,62],[28,86],[72,86]],'10':[[28,14],[72,14],[50,26],[28,38],[72,38],[28,62],[72,62],[50,74],[28,86],[72,86]]};
+const isRed=s=>SUITS[s].color==='red';
+const suitClass=s=>isRed(s)?'red-suit':'black-suit';
+const cardName=c=>RANKS[c.r].name+' of '+SUITS[c.s].name;
+function faceInner(card){
+  const rk=RANKS[card.r],su=SUITS[card.s],sc=suitClass(card.s);
+  let h=`<div class="corner tl ${sc}"><span class="r">${rk.v}</span><span class="s">${su.sym}</span></div><div class="corner br ${sc}"><span class="r">${rk.v}</span><span class="s">${su.sym}</span></div>`;
+  if(rk.kind==='ace')h+=`<div class="center-big ${sc}">${su.sym}</div>`;
+  else if(rk.kind==='face')h+=`<div class="court-frame ${sc}"><span class="letter">${rk.v}</span></div>`;
+  else{h+=`<div class="pips">`;PIPS[rk.v].forEach(([x,y])=>{h+=`<span class="pip ${sc}${y>50?' flip':''}" style="left:${x}%;top:${y}%">${su.sym}</span>`;});h+=`</div>`;}
+  return h;
+}
+function cardEl(card,faceUp,extra){
+  const el=document.createElement('div');
+  el.className='pcard '+(faceUp?'face '+(RANKS[card.r].kind==='face'?'court ':''):'back ')+(extra||'');
+  if(faceUp)el.innerHTML=faceInner(card);
+  return el;
+}
+function freshDeck(){const d=[];for(let s=0;s<4;s++)for(let r=0;r<13;r++)d.push({r,s});for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}return d;}
+
+/* ============================================================
+   SCREEN ROUTER
+   ============================================================ */
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));document.getElementById(id).classList.add('show');window.scrollTo(0,0);}
+document.querySelectorAll('[data-home]').forEach(b=>b.addEventListener('click',()=>{ if(typeof POK!=='undefined')POK.cleanup(); showScreen('screen-home'); }));
+document.getElementById('goSolitaire').onclick=()=>{showScreen('screen-sol');SOL.deal();};
+document.getElementById('goPoker').onclick=()=>{showScreen('screen-pmenu');};
+document.getElementById('goCpu').onclick=()=>{document.getElementById('cpu-setup').style.display='block';document.getElementById('online-setup').style.display='none';};
+document.getElementById('goOnline').onclick=()=>{document.getElementById('online-setup').style.display='block';document.getElementById('cpu-setup').style.display='none';};
+
+/* ============================================================
+   SOLITAIRE  (Klondike)
+   ============================================================ */
+const SOL=(function(){
+  const CARD_H=134,GAP_DOWN=20,GAP_UP=30;
+  let st,history,sel,drawMode=1,moves=0,timer=null,seconds=0,started=false;
+  const $=id=>document.getElementById(id);
+  function deal(){
+    const d=freshDeck();
+    st={stock:[],waste:[],foundations:[[],[],[],[]],tableau:[[],[],[],[],[],[],[]]};
+    for(let c=0;c<7;c++)for(let k=0;k<=c;k++){const card=d.pop();card.up=(k===c);st.tableau[c].push(card);}
+    st.stock=d;st.stock.forEach(c=>c.up=false);
+    history=[];sel=null;moves=0;seconds=0;started=false;if(timer){clearInterval(timer);timer=null;}
+    status('Tap the deck to draw. Build foundations from <span class="nm">Ace</span> up to <span class="nm">King</span>.');
+    render();stats();
+  }
+  const clone=o=>JSON.parse(JSON.stringify(o));
+  function pushUndo(){history.push(clone(st));if(history.length>200)history.shift();}
+  function validRun(cs){for(let i=0;i<cs.length;i++){if(!cs[i].up)return false;if(i>0){const a=cs[i-1],b=cs[i];if(!(a.r===b.r+1&&isRed(a.s)!==isRed(b.s)))return false;}}return true;}
+  function canTab(mv,col){const t=st.tableau[col],base=mv[0];if(!t.length)return base.r===12;const top=t[t.length-1];return top.up&&top.r===base.r+1&&isRed(top.s)!==isRed(base.s);}
+  function canF(card,f){const fp=st.foundations[f];if(!fp.length)return card.r===0;const top=fp[fp.length-1];return top.s===card.s&&card.r===top.r+1;}
+  function getMv(s){if(!s)return null;if(s.t==='waste'){const w=st.waste;return w.length?[w[w.length-1]]:null;}if(s.t==='foundation'){const f=st.foundations[s.f];return f.length?[f[f.length-1]]:null;}if(s.t==='tableau')return st.tableau[s.col].slice(s.idx);}
+  function rmMv(s){if(s.t==='waste')return[st.waste.pop()];if(s.t==='foundation')return[st.foundations[s.f].pop()];if(s.t==='tableau'){const col=st.tableau[s.col],m=col.splice(s.idx);if(col.length&&!col[col.length-1].up)col[col.length-1].up=true;return m;}}
+  function startTimer(){if(started)return;started=true;timer=setInterval(()=>{seconds++;$('sol-time').textContent=fmt(seconds);},1000);}
+  const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  function tryPlace(s,tg){const mv=getMv(s);if(!mv||!mv.length)return false;
+    if(tg.t==='foundation'){if(mv.length!==1||!canF(mv[0],tg.f))return false;pushUndo();const m=rmMv(s);st.foundations[tg.f].push(m[0]);after();status('<span class="nm">'+cardName(m[0])+'</span> goes home.');return true;}
+    if(tg.t==='tableau'){if(!canTab(mv,tg.col))return false;pushUndo();const m=rmMv(s);st.tableau[tg.col].push(...m);after();status(m.length>1?('Moved '+m.length+' cards.'):('<span class="nm">'+cardName(m[0])+'</span> moved.'));return true;}
+    return false;}
+  function after(){startTimer();moves++;sel=null;render();stats();win();}
+  function clickStock(){sel=null;
+    if(st.stock.length){pushUndo();for(let i=0;i<drawMode&&st.stock.length;i++){const c=st.stock.pop();c.up=true;st.waste.push(c);}startTimer();moves++;render();stats();status('Drew from the deck.');}
+    else if(st.waste.length){pushUndo();while(st.waste.length){const c=st.waste.pop();c.up=false;st.stock.push(c);}startTimer();moves++;render();stats();status('Reshuffled the waste.');}}
+  function handle(loc){
+    if(loc.t==='stock'){clickStock();return;}
+    if(sel&&(loc.t==='foundation'||loc.t==='tableau')&&tryPlace(sel,loc))return;
+    if(loc.t==='waste'){if(!st.waste.length){sel=null;render();return;}sel=(sel&&sel.t==='waste')?null:{t:'waste'};}
+    else if(loc.t==='foundation'){const f=st.foundations[loc.f];if(!f.length){sel=null;render();return;}sel=(sel&&sel.t==='foundation'&&sel.f===loc.f)?null:{t:'foundation',f:loc.f};}
+    else if(loc.t==='tableau'){const col=st.tableau[loc.col];if(loc.idx<0||!col.length){sel=null;render();return;}const card=col[loc.idx];if(!card.up){sel=null;render();return;}if(!validRun(col.slice(loc.idx))){sel=null;render();return;}sel=(sel&&sel.t==='tableau'&&sel.col===loc.col&&sel.idx===loc.idx)?null:{t:'tableau',col:loc.col,idx:loc.idx};}
+    if(sel){const mv=getMv(sel);if(mv&&mv.length)status('Picked up the <span class="nm">'+cardName(mv[0])+'</span>'+(mv.length>1?' (+'+(mv.length-1)+' more)':'')+'.');}
+    render();
+  }
+  let lastDbl=0;
+  function dbl(loc){lastDbl=Date.now();let card=null,s=null;
+    if(loc.t==='waste'&&st.waste.length){card=st.waste[st.waste.length-1];s={t:'waste'};}
+    else if(loc.t==='tableau'){const col=st.tableau[loc.col];if(loc.idx===col.length-1&&col.length&&col[loc.idx].up){card=col[loc.idx];s={t:'tableau',col:loc.col,idx:loc.idx};}}
+    if(!card)return;for(let f=0;f<4;f++)if(canF(card,f)){sel=s;tryPlace(s,{t:'foundation',f});return;}
+    status('The <span class="nm">'+cardName(card)+'</span> can’t go home yet.');}
+  const guard=fn=>()=>{if(Date.now()-lastDbl<260)return;fn();};
+  const isSel=(t,a,b)=>{if(!sel||sel.t!==t)return false;if(t==='waste')return true;if(t==='foundation')return sel.f===a;return sel.col===a&&sel.idx===b;};
+  function render(){
+    const mv=getMv(sel);
+    const stock=$('sol-stock');stock.innerHTML='';
+    if(st.stock.length){const b=cardEl({r:0,s:0},false);b.style.top='0';b.onclick=()=>handle({t:'stock'});stock.appendChild(b);}
+    else{const ph=document.createElement('div');ph.className='placeholder tap';ph.textContent='↻';ph.onclick=()=>handle({t:'stock'});stock.appendChild(ph);}
+    const waste=$('sol-waste');waste.innerHTML='';
+    if(st.waste.length){const start=Math.max(0,st.waste.length-3);for(let i=start;i<st.waste.length;i++){const c=st.waste[i],top=i===st.waste.length-1;const el=cardEl(c,true,(top&&isSel('waste'))?'sel':(top?'':'dim'));el.style.top='0';el.style.left=((i-start)*16)+'px';if(top){el.onclick=guard(()=>handle({t:'waste'}));el.ondblclick=()=>dbl({t:'waste'});}waste.appendChild(el);}}
+    else{const ph=document.createElement('div');ph.className='placeholder';waste.appendChild(ph);}
+    const fh=$('sol-foundations');fh.innerHTML='';
+    for(let f=0;f<4;f++){const slot=document.createElement('div');slot.className='sol-slot';const fp=st.foundations[f],legal=mv&&mv.length===1&&canF(mv[0],f);
+      if(fp.length){const c=fp[fp.length-1],el=cardEl(c,true,isSel('foundation',f)?'sel':(legal?'legalring':''));el.style.top='0';el.onclick=guard(()=>handle({t:'foundation',f}));el.ondblclick=()=>dbl({t:'foundation',f});slot.appendChild(el);}
+      else{const ph=document.createElement('div');ph.className='placeholder tap'+(legal?' legal':'');ph.innerHTML='<span style="font-size:1.3rem">A</span>';ph.onclick=()=>handle({t:'foundation',f});slot.appendChild(ph);}
+      fh.appendChild(slot);}
+    const th=$('sol-tableau');th.innerHTML='';
+    for(let c=0;c<7;c++){const col=document.createElement('div');col.className='col';const cards=st.tableau[c],legal=mv&&canTab(mv,c);
+      if(!cards.length){const ph=document.createElement('div');ph.className='placeholder tap'+(legal?' legal':'');ph.onclick=guard(()=>handle({t:'tableau',col:c,idx:-1}));col.appendChild(ph);}
+      else{let top=0;cards.forEach((card,idx)=>{let cls='';if(sel&&sel.t==='tableau'&&sel.col===c&&idx>=sel.idx)cls='sel';else if(legal&&idx===cards.length-1)cls='legalring';const el=cardEl(card,card.up,cls);el.style.top=top+'px';if(card.up){el.onclick=guard(()=>handle({t:'tableau',col:c,idx}));el.ondblclick=()=>dbl({t:'tableau',col:c,idx});}col.appendChild(el);top+=card.up?GAP_UP:GAP_DOWN;});col.style.minHeight=(top-(cards[cards.length-1].up?GAP_UP:GAP_DOWN)+CARD_H)+'px';}
+      th.appendChild(col);}
+    const noHidden=st.tableau.every(col=>col.every(c=>c.up));
+    $('sol-auto').disabled=!(noHidden&&(st.stock.length+st.waste.length===0||drawMode===1));
+  }
+  function stats(){$('sol-moves').textContent=moves;$('sol-found').textContent=st.foundations.reduce((a,b)=>a+b.length,0);}
+  const status=h=>$('sol-status').innerHTML=h;
+  function win(){if(st.foundations.reduce((a,b)=>a+b.length,0)===52){if(timer){clearInterval(timer);timer=null;}$('winpanel').innerHTML='<h2>You win!</h2><p>All 52 cards home in <b>'+moves+'</b> moves and <b>'+fmt(seconds)+'</b>.</p><button class="btn gold" id="sol-again">Deal again</button>';$('overlay').classList.add('show');$('sol-again').onclick=()=>{$('overlay').classList.remove('show');deal();};confetti();}}
+  function autoStep(){const tops=[];if(st.waste.length)tops.push({s:{t:'waste'},c:st.waste[st.waste.length-1]});st.tableau.forEach((col,ci)=>{if(col.length&&col[col.length-1].up)tops.push({s:{t:'tableau',col:ci,idx:col.length-1},c:col[col.length-1]});});for(const tp of tops)for(let f=0;f<4;f++)if(canF(tp.c,f)){sel=tp.s;if(tryPlace(tp.s,{t:'foundation',f}))return true;}return false;}
+  function autoFinish(){const iv=setInterval(()=>{if(!autoStep()){clearInterval(iv);if(st.stock.length&&drawMode===1)clickStock();}},140);}
+  function hint(){const tops=[];if(st.waste.length)tops.push({c:st.waste[st.waste.length-1],l:cardName(st.waste[st.waste.length-1])+' from the waste'});st.tableau.forEach(col=>{if(col.length&&col[col.length-1].up)tops.push({c:col[col.length-1],l:cardName(col[col.length-1])});});
+    for(const tp of tops)for(let f=0;f<4;f++)if(canF(tp.c,f)){status('Hint: send the <span class="nm">'+tp.l+'</span> to a foundation.');return;}
+    const src=[];if(st.waste.length)src.push({mv:[st.waste[st.waste.length-1]],l:cardName(st.waste[st.waste.length-1])+' from the waste'});st.tableau.forEach((col,ci)=>{for(let i=0;i<col.length;i++)if(col[i].up&&validRun(col.slice(i))){src.push({mv:col.slice(i),from:ci,l:cardName(col[i])});break;}});
+    for(const s of src)for(let c=0;c<7;c++){if(s.from===c)continue;if(canTab(s.mv,c)){const d=st.tableau[c];status('Hint: move the <span class="nm">'+s.l+'</span> onto '+(d.length?'the '+cardName(d[d.length-1]):'the empty column')+'.');return;}}
+    status(st.stock.length||st.waste.length?'Hint: draw from the deck.':'Hint: no moves left — try a new game.');}
+  $('sol-new').onclick=deal;
+  $('sol-undo').onclick=()=>{if(history.length){st=history.pop();sel=null;moves++;render();stats();status('Move undone.');}};
+  $('sol-auto').onclick=autoFinish;$('sol-hint').onclick=hint;
+  $('sol-d1').onclick=()=>{drawMode=1;$('sol-d1').classList.add('active');$('sol-d3').classList.remove('active');deal();};
+  $('sol-d3').onclick=()=>{drawMode=3;$('sol-d3').classList.add('active');$('sol-d1').classList.remove('active');deal();};
+  return {deal};
+})();
+
+/* ============================================================
+   POKER  (Texas Hold'em) — engine + UI + online (PeerJS)
+   ============================================================ */
+function confetti(){const cols=['#d4af37','#b11226','#fbf7ea','#11614a','#caa84a'];for(let i=0;i<80;i++){const c=document.createElement('div');c.className='confetti';c.style.left=Math.random()*100+'vw';c.style.background=cols[i%cols.length];c.style.animationDuration=(2+Math.random()*2.5)+'s';c.style.animationDelay=(Math.random()*0.6)+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),5000);}}
+
+const POK=(function(){
+  const $=id=>document.getElementById(id);
+  const SB=10,BB=20,START=1000;
+  let mode='cpu';                 // 'cpu' | 'host' | 'client'
+  let P=[];                       // players (engine state; host/cpu only)
+  let community=[],deck=[],pot=0,dealer=0,toActIdx=0,curBet=0,minRaise=BB,stage=0,handLive=false;
+  let myIdx=0;                    // local player's seat (cpu=0, host=0, client=its seat)
+  let peer=null,conns=[],hostConn=null,room='',myName='You',lobby=[];
+
+  /* ---------- hand evaluation ---------- */
+  const pr=r=>r===0?14:r+1;       // poker rank, Ace high
+  function score5(cs){
+    const rv=cs.map(c=>pr(c.r)).sort((a,b)=>b-a);
+    const flush=cs.every(c=>c.s===cs[0].s);
+    let uniq=[...new Set(rv)].sort((a,b)=>b-a),sH=0;
+    if(uniq.length===5){if(uniq[0]-uniq[4]===4)sH=uniq[0];else if(uniq[0]===14&&uniq[1]===5&&uniq[4]===2)sH=5;}
+    const cnt={};rv.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+    const g=Object.entries(cnt).map(([v,c])=>[c,+v]).sort((a,b)=>b[0]-a[0]||b[1]-a[1]);
+    if(flush&&sH)return[8,sH];
+    if(g[0][0]===4)return[7,g[0][1],g[1][1]];
+    if(g[0][0]===3&&g[1]&&g[1][0]>=2)return[6,g[0][1],g[1][1]];
+    if(flush)return[5,...rv];
+    if(sH)return[4,sH];
+    if(g[0][0]===3)return[3,g[0][1],...g.slice(1).map(x=>x[1])];
+    if(g[0][0]===2&&g[1]&&g[1][0]===2)return[2,g[0][1],g[1][1],g.slice(2).map(x=>x[1])[0]];
+    if(g[0][0]===2)return[1,g[0][1],...g.slice(1).map(x=>x[1])];
+    return[0,...rv];
+  }
+  const cmp=(a,b)=>{const n=Math.max(a.length,b.length);for(let i=0;i<n;i++){const x=a[i]||0,y=b[i]||0;if(x!==y)return x-y;}return 0;};
+  function best7(cards){let bs=null;for(let i=0;i<7;i++)for(let j=i+1;j<7;j++){const five=cards.filter((_,k)=>k!==i&&k!==j);const s=score5(five);if(!bs||cmp(s,bs)>0)bs=s;}return bs;}
+  const HAND_NAMES=['High Card','Pair','Two Pair','Three of a Kind','Straight','Flush','Full House','Four of a Kind','Straight Flush'];
+
+  /* ---------- setup ---------- */
+  function newPlayersCpu(nBots){
+    const names=['North','East','South','West'];
+    P=[{name:'You',kind:'me',stack:START}];
+    for(let i=0;i<nBots;i++)P.push({name:names[i],kind:'bot',stack:START});
+    P.forEach(p=>{p.hole=[];p.bet=0;p.folded=false;p.allIn=false;p.out=false;});
+    dealer=Math.floor(Math.random()*P.length);myIdx=0;mode='cpu';
+  }
+  function startCpu(nBots){newPlayersCpu(nBots);$('poker-eyebrow').textContent="Texas Hold'em · vs Computer";showScreen('screen-poker');startHand();}
+
+  /* ---------- hand flow ---------- */
+  function activePlayers(){return P.filter(p=>!p.out);}
+  function nextAlive(i){let n=P.length,k=(i+1)%n,g=0;while((P[k].out)&&g<n){k=(k+1)%n;g++;}return k;}
+  function nextInHand(i){let n=P.length,k=(i+1)%n,g=0;while((P[k].out||P[k].folded||P[k].allIn)&&g<n){k=(k+1)%n;g++;}return k;}
+  function startHand(){
+    if(activePlayers().length<2){return endGame();}
+    deck=freshDeck();community=[];pot=0;stage=0;handLive=true;
+    P.forEach(p=>{p.hole=[];p.bet=0;p.folded=false;p.allIn=false;p.acted=false;});
+    dealer=nextAlive(dealer);
+    for(let r=0;r<2;r++)P.forEach(p=>{if(!p.out)p.hole.push(deck.pop());});
+    // blinds
+    const sb=nextAlive(dealer),bb=nextAlive(sb);
+    postBlind(sb,SB);postBlind(bb,BB);
+    curBet=BB;minRaise=BB;
+    toActIdx=nextAlive(bb);
+    P.forEach(p=>{if(!p.out&&!p.allIn)p.acted=false;});
+    P[bb].acted=false; // BB has option
+    msg('New hand. Blinds posted.');
+    sync();proceed();
+  }
+  function postBlind(i,amt){const p=P[i];const put=Math.min(amt,p.stack);p.stack-=put;p.bet+=put;pot+=put;if(p.stack===0)p.allIn=true;}
+  function roundActiveCount(){return P.filter(p=>!p.out&&!p.folded).length;}
+  function canActCount(){return P.filter(p=>!p.out&&!p.folded&&!p.allIn).length;}
+  function roundDone(){return P.every(p=>p.out||p.folded||p.allIn||(p.acted&&p.bet===curBet));}
+
+  function proceed(){
+    if(roundActiveCount()<=1){return endHand();}
+    if(roundDone()){return advanceStage();}
+    // find next player to act
+    let guard=0;while((P[toActIdx].out||P[toActIdx].folded||P[toActIdx].allIn||(P[toActIdx].acted&&P[toActIdx].bet===curBet))&&guard<P.length*3){toActIdx=nextAlive(toActIdx);guard++;}
+    if(roundDone())return advanceStage();
+    sync();
+    const p=P[toActIdx];
+    if(p.kind==='bot'){setTimeout(botAct,850);}
+    else { /* human/remote: wait for action via UI or network */ }
+  }
+  function advanceStage(){
+    P.forEach(p=>{p.bet=0;p.acted=false;});
+    curBet=0;minRaise=BB;
+    if(stage===0){community.push(deck.pop(),deck.pop(),deck.pop());stage=1;msg('The flop.');}
+    else if(stage===1){community.push(deck.pop());stage=2;msg('The turn.');}
+    else if(stage===2){community.push(deck.pop());stage=3;msg('The river.');}
+    else{return showdown();}
+    if(canActCount()<=1){ // everyone all-in: run it out
+      sync();setTimeout(advanceStage,900);return;
+    }
+    toActIdx=nextInHand(dealer);
+    sync();proceed();
+  }
+
+  /* ---------- actions ---------- */
+  function act(idx,action,amount){
+    if(!handLive||idx!==toActIdx)return;
+    const p=P[idx];
+    if(action==='fold'){p.folded=true;p.acted=true;msg('<span class="nm">'+p.name+'</span> folds.');}
+    else if(action==='check'){if(p.bet!==curBet)return;p.acted=true;msg('<span class="nm">'+p.name+'</span> checks.');}
+    else if(action==='call'){const need=Math.min(curBet-p.bet,p.stack);p.stack-=need;p.bet+=need;pot+=need;if(p.stack===0)p.allIn=true;p.acted=true;msg('<span class="nm">'+p.name+'</span> calls '+need+'.');}
+    else if(action==='raise'){
+      let target=Math.max(amount,curBet+minRaise);
+      let need=target-p.bet;if(need>=p.stack){need=p.stack;target=p.bet+need;}
+      p.stack-=need;p.bet+=need;pot+=need;
+      if(target-curBet>=minRaise)minRaise=target-curBet;
+      curBet=Math.max(curBet,target);
+      if(p.stack===0)p.allIn=true;
+      P.forEach(q=>{if(!q.out&&!q.folded&&!q.allIn&&q!==p)q.acted=false;});
+      p.acted=true;msg('<span class="nm">'+p.name+'</span> raises to '+target+'.');
+    }
+    toActIdx=nextAlive(idx);
+    proceed();
+  }
+  // bot AI
+  function strength(p){
+    if(community.length===0){
+      const a=pr(p.hole[0].r),b=pr(p.hole[1].r),hi=Math.max(a,b),lo=Math.min(a,b);
+      const pair=p.hole[0].r===p.hole[1].r,suited=p.hole[0].s===p.hole[1].s,gap=hi-lo;
+      let s=(hi+lo)/30;if(pair)s=0.55+hi/30;if(suited)s+=0.05;if(gap===1)s+=0.04;
+      return Math.max(0,Math.min(1,s));
+    }
+    const sc=best7([...p.hole,...community]);
+    return Math.min(1,sc[0]/8+0.04);
+  }
+  function botAct(){
+    if(!handLive)return;const p=P[toActIdx];if(p.kind!=='bot'){proceed();return;}
+    const s=strength(p)+(Math.random()-0.5)*0.18;
+    const toCall=curBet-p.bet;
+    if(toCall<=0){
+      if(s>0.62&&Math.random()<0.55){const raise=Math.min(p.stack+p.bet,Math.round(pot*0.6/BB)*BB||BB);act(toActIdx,'raise',Math.max(curBet+minRaise,p.bet+raise));}
+      else act(toActIdx,'check');
+    } else {
+      if(s<0.28&&Math.random()<0.85){ if(toCall<=BB&&Math.random()<0.4)act(toActIdx,'call');else act(toActIdx,'fold'); }
+      else if(s>0.72&&Math.random()<0.6){const raise=Math.min(p.stack+p.bet,Math.round(pot*0.7/BB)*BB||BB);act(toActIdx,'raise',Math.max(curBet+minRaise,curBet+raise));}
+      else act(toActIdx,'call');
+    }
+  }
+
+  /* ---------- showdown / end ---------- */
+  function endHand(){
+    handLive=false;
+    const live=P.filter(p=>!p.out&&!p.folded);
+    if(live.length===1){live[0].stack+=pot;msg('<span class="nm">'+live[0].name+'</span> wins '+pot+' (everyone folded).');}
+    else showdownAward(live,true);
+    pot=0;cleanupBusts();sync();
+    showResult();
+  }
+  function showdown(){handLive=false;const live=P.filter(p=>!p.out&&!p.folded);showdownAward(live,false);pot=0;cleanupBusts();sync();showResult();}
+  function showdownAward(live,skipReveal){
+    live.forEach(p=>p.reveal=true);
+    let best=null,winners=[];
+    live.forEach(p=>{const sc=best7([...p.hole,...community]);p.score=sc;if(!best||cmp(sc,best)>0){best=sc;winners=[p];}else if(cmp(sc,best)===0)winners.push(p);});
+    const share=Math.floor(pot/winners.length);winners.forEach((w,i)=>w.stack+=share+(i===0?pot-share*winners.length:0));
+    if(live.length>1){const wn=winners.map(w=>w.name).join(' & ');msg('<span class="nm">'+wn+'</span> win'+(winners.length>1?'':'s')+' with '+HAND_NAMES[best[0]]+'.');}
+  }
+  function cleanupBusts(){P.forEach(p=>{if(!p.out&&p.stack<=0){p.out=true;}});}
+  function showResult(){
+    const alive=activePlayers();
+    if(alive.length<=1){return endGame();}
+    if(mode==='client')return;
+    setTimeout(()=>{ if(mode==='cpu'||mode==='host'){ if(handLive)return; startHand(); } },2600);
+  }
+  function endGame(){
+    handLive=false;const winner=activePlayers()[0];
+    const youWin=winner&&winner.kind==='me';
+    $('winpanel').innerHTML='<h2>'+(youWin?'You win!':'Game over')+'</h2><p>'+(winner?('<b>'+winner.name+'</b> takes the table.'):'No players left.')+'</p><button class="btn gold" id="pk-again">Back to menu</button>';
+    $('overlay').classList.add('show');if(youWin)confetti();
+    $('pk-again').onclick=()=>{$('overlay').classList.remove('show');cleanup();showScreen('screen-home');};
+    sync();
+  }
+
+  /* ---------- VIEW building + rendering ---------- */
+  function buildView(forIdx){
+    return {
+      community:community.slice(),pot,dealer,toActIdx,curBet,minRaise,stage,handLive,
+      players:P.map((p,i)=>({name:p.name,stack:p.stack,bet:p.bet,folded:p.folded,allIn:p.allIn,out:p.out,
+        you:i===forIdx,
+        hole:(i===forIdx||p.reveal)?p.hole:null,cardCount:p.hole?p.hole.length:0,
+        score:p.reveal&&p.score?HAND_NAMES[p.score[0]]:null})),
+      you:(()=>{const p=P[forIdx];const turn=handLive&&toActIdx===forIdx&&!p.folded&&!p.allIn&&!p.out;
+        const toCall=Math.max(0,curBet-(p.bet||0));
+        return {idx:forIdx,turn,toCall,canCheck:toCall===0,minRaiseTo:Math.min(p.stack+(p.bet||0),curBet+minRaise),maxRaiseTo:p.stack+(p.bet||0),stack:p.stack};})(),
+      msg:lastMsg
+    };
+  }
+  let lastMsg='';
+  function msg(h){lastMsg=h;}
+  function sync(){
+    if(mode==='client')return;
+    renderPoker(buildView(myIdx));
+    if(mode==='host'){conns.forEach(c=>{if(c.idx!=null&&c.conn.open)c.conn.send({type:'view',view:buildView(c.idx)});});}
+  }
+  function renderPoker(v){
+    // opponents
+    const opps=$('pk-opps');opps.innerHTML='';
+    v.players.forEach((p,i)=>{if(p.you)return;
+      const seat=document.createElement('div');seat.className='seat'+(p.folded?' folded':'')+(v.toActIdx===i&&v.handLive?' active':'');
+      let cardsHtml='';
+      const cnt=p.hole?p.hole.length:p.cardCount;
+      seat.innerHTML='<div class="who">'+p.name+(i===v.dealer?'<span class="dealer">D</span>':'')+'</div><div class="stack">'+p.stack+(p.out?' · OUT':'')+'</div><div class="cards"></div><div class="bet">'+(p.bet?'bet <b>'+p.bet+'</b>':(p.allIn?'ALL-IN':'&nbsp;'))+(p.score?' · '+p.score:'')+'</div>';
+      const cd=seat.querySelector('.cards');
+      if(!p.out){for(let k=0;k<(cnt||0);k++){const show=p.hole&&p.hole[k];cd.appendChild(cardEl(show?p.hole[k]:{r:0,s:0},!!show));}}
+      opps.appendChild(seat);
+    });
+    // community + pot
+    $('pk-pot').textContent='Pot: '+v.pot;
+    const com=$('pk-community');com.innerHTML='';
+    v.community.forEach(c=>com.appendChild(cardEl(c,true)));
+    for(let k=v.community.length;k<5;k++){const ph=document.createElement('div');ph.style.width='var(--cw)';ph.style.height='var(--ch)';ph.style.border='2px dashed rgba(212,175,55,.25)';ph.style.borderRadius='10px';com.appendChild(ph);}
+    $('pk-msg').innerHTML=v.msg||'';
+    // me
+    const me=v.players.find(p=>p.you);const meBox=$('pk-me');meBox.innerHTML='';
+    if(me){const seat=document.createElement('div');seat.className='seat'+(me.folded?' folded':'')+(v.you.turn?' active':'');
+      seat.innerHTML='<div class="cards" style="margin-bottom:4px"></div><div class="who">'+me.name+(v.players.indexOf(me)===v.dealer?'<span class="dealer">D</span>':'')+'</div><div class="stack">'+me.stack+(me.out?' · OUT':'')+'</div><div class="bet">'+(me.bet?'bet <b>'+me.bet+'</b>':(me.allIn?'ALL-IN':'&nbsp;'))+(me.score?' · '+me.score:'')+'</div>';
+      const cd=seat.querySelector('.cards');cd.style.justifyContent='center';
+      if(me.hole)me.hole.forEach(c=>cd.appendChild(cardEl(c,true)));
+      meBox.appendChild(seat);}
+    renderActions(v);
+  }
+  function renderActions(v){
+    const bar=$('pk-actions');bar.innerHTML='';
+    if(!v.handLive||!v.you.turn)return;
+    const toCall=v.you.toCall,stack=v.you.stack;
+    const fold=mkBtn('Fold',()=>send('fold'));fold.className='btn';bar.appendChild(fold);
+    if(v.you.canCheck){bar.appendChild(mkBtn('Check',()=>send('check'),'btn gold'));}
+    else{const amt=Math.min(toCall,stack);bar.appendChild(mkBtn('Call '+amt,()=>send('call'),'btn gold'));}
+    if(stack>toCall){
+      const wrap=document.createElement('div');wrap.className='raise-ctl';
+      const min=v.you.minRaiseTo,max=v.you.maxRaiseTo;
+      const slider=document.createElement('input');slider.type='range';slider.min=min;slider.max=max;slider.step=BB;slider.value=Math.min(max,min);
+      const lbl=document.createElement('span');lbl.className='amt';lbl.textContent=slider.value;
+      slider.oninput=()=>lbl.textContent=slider.value;
+      const rbtn=mkBtn(max<=min?'All-in':'Raise',()=>send('raise',+slider.value),'btn gold');
+      wrap.appendChild(slider);wrap.appendChild(lbl);bar.appendChild(wrap);bar.appendChild(rbtn);
+    }
+  }
+  function mkBtn(t,fn,cls){const b=document.createElement('button');b.className=cls||'btn';b.textContent=t;b.onclick=fn;return b;}
+  function send(action,amount){
+    if(mode==='client'){if(hostConn&&hostConn.open)hostConn.send({type:'action',action,amount});$('pk-actions').innerHTML='';}
+    else{act(myIdx,action,amount);}
+  }
+
+  /* ---------- ONLINE (PeerJS) ---------- */
+  function genCode(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
+  function createRoom(name){
+    if(typeof Peer==='undefined'){$('mp-note').textContent='Networking library failed to load. Check your connection and reload.';return;}
+    myName=name||'Host';room=genCode();mode='host';lobby=[{name:myName,host:true}];
+    peer=new Peer('cardroom-'+room,{debug:1});
+    peer.on('open',()=>{showScreen('screen-lobby');$('lobby-code').textContent=room;$('lobby-start').style.display='inline-block';renderLobby();});
+    peer.on('error',e=>{$('mp-note').textContent='Connection error: '+e.type;});
+    peer.on('connection',conn=>{
+      conn.on('open',()=>{});
+      conn.on('data',m=>hostMsg(conn,m));
+      conn.on('close',()=>{const c=conns.find(x=>x.conn===conn);if(c){lobby=lobby.filter(l=>l.connId!==conn.peer);renderLobby();}});
+    });
+  }
+  function hostMsg(conn,m){
+    if(m.type==='hello'){
+      if(!conns.find(c=>c.conn===conn)){conns.push({conn,idx:null,name:m.name});lobby.push({name:m.name,connId:conn.peer});renderLobby();
+        conn.send({type:'lobby',players:lobby.map(l=>l.name),room});}
+    } else if(m.type==='action'){
+      const c=conns.find(x=>x.conn===conn);if(c&&c.idx!=null)act(c.idx,m.action,m.amount);
+    }
+  }
+  function joinRoom(name,code){
+    if(typeof Peer==='undefined'){$('mp-note').textContent='Networking library failed to load. Check your connection and reload.';return;}
+    myName=name||'Player';room=code;mode='client';
+    peer=new Peer({debug:1});
+    peer.on('open',()=>{hostConn=peer.connect('cardroom-'+code,{reliable:true});
+      hostConn.on('open',()=>{hostConn.send({type:'hello',name:myName});showScreen('screen-lobby');$('lobby-code').textContent=code;$('lobby-start').style.display='none';$('lobby-note').textContent='Joined! Waiting for the host to start…';});
+      hostConn.on('data',clientMsg);
+      hostConn.on('error',()=>{$('mp-note').textContent='Could not reach that room.';});
+    });
+    peer.on('error',e=>{showScreen('screen-pmenu');$('mp-note').textContent='Could not join: '+e.type+'. Check the code.';});
+  }
+  function clientMsg(m){
+    if(m.type==='lobby'){renderLobbyClient(m.players);}
+    else if(m.type==='start'){myIdx=m.yourIdx;$('poker-eyebrow').textContent="Texas Hold'em · Online";showScreen('screen-poker');}
+    else if(m.type==='view'){renderPoker(m.view);}
+  }
+  function renderLobby(){const ul=$('lobby-players');ul.innerHTML='';lobby.forEach(l=>{const li=document.createElement('li');li.innerHTML='<span>'+l.name+'</span><span class="tag">'+(l.host?'host':'ready')+'</span>';ul.appendChild(li);});$('lobby-note').textContent=lobby.length<2?'Waiting for players to join…':'Ready when you are.';}
+  function renderLobbyClient(names){const ul=$('lobby-players');ul.innerHTML='';names.forEach((n,i)=>{const li=document.createElement('li');li.innerHTML='<span>'+n+'</span><span class="tag">'+(i===0?'host':'player')+'</span>';ul.appendChild(li);});}
+  function startOnline(){
+    // build seats: host=0, then each connected client
+    P=[{name:myName,kind:'me',stack:START}];
+    conns.forEach(c=>{c.idx=P.length;P.push({name:c.name,kind:'remote',stack:START});});
+    P.forEach(p=>{p.hole=[];p.bet=0;p.folded=false;p.allIn=false;p.out=false;});
+    myIdx=0;dealer=0;
+    conns.forEach(c=>{if(c.conn.open)c.conn.send({type:'start',yourIdx:c.idx});});
+    $('poker-eyebrow').textContent="Texas Hold'em · Online (host)";showScreen('screen-poker');startHand();
+  }
+
+  function cleanup(){handLive=false;try{conns.forEach(c=>c.conn&&c.conn.close());}catch(e){}try{if(hostConn)hostConn.close();}catch(e){}try{if(peer)peer.destroy();}catch(e){}conns=[];hostConn=null;peer=null;lobby=[];mode='cpu';}
+
+  /* ---------- wire up menu ---------- */
+  let cpuBots=2;
+  document.querySelectorAll('#cpu-setup [data-bots]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#cpu-setup [data-bots]').forEach(x=>x.classList.remove('active'));b.classList.add('active');cpuBots=+b.dataset.bots;});
+  $('cpu-start').onclick=()=>startCpu(cpuBots);
+  $('mp-create').onclick=()=>createRoom($('mp-name').value.trim());
+  $('mp-join').onclick=()=>{$('mp-join-box').style.display='block';};
+  $('mp-join-go').onclick=()=>joinRoom($('mp-name').value.trim(),$('mp-code').value.trim().toUpperCase());
+  $('lobby-start').onclick=startOnline;
+  $('lobby-leave').onclick=()=>{cleanup();showScreen('screen-pmenu');};
+
+  return {cleanup};
+})();
+</script>
+</body>
+</html>
