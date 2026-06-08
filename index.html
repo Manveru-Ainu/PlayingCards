@@ -100,6 +100,19 @@
 
   /* ---- Poker layout ---- */
   #screen-poker{--cw:78px;--ch:109px}
+  /* ---- Blackjack ---- */
+  #screen-bj{--cw:78px;--ch:109px}
+  .bj-table{max-width:760px;padding:24px 24px 28px}
+  .bj-area{text-align:center;margin:8px 0}
+  .bj-label{font-weight:700;color:var(--cream);letter-spacing:.06em;margin-bottom:8px}
+  .bj-label span{color:var(--gold-soft);font-weight:700}
+  .bj-hand{display:flex;gap:8px;justify-content:center;min-height:var(--ch);flex-wrap:wrap}
+  .bj-seats{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:10px}
+  .bj-seats .seat{width:auto;min-width:120px;max-width:200px}
+  .bj-seats .seat .cards{flex-wrap:wrap}
+  .bj-seats .seat .status{font-size:.8rem;min-height:18px;color:var(--gold-soft);font-weight:700}
+  .chip{font-family:'Karla',sans-serif;font-weight:700;border:2px solid rgba(212,175,55,.5);background:radial-gradient(circle at 50% 38%,#15795c,#0a4232);color:var(--cream);width:54px;height:54px;border-radius:50%;cursor:pointer;font-size:.82rem;transition:.15s}
+  .chip:hover{transform:translateY(-3px);border-color:var(--gold)}
   .pk-table{background:radial-gradient(ellipse at 50% 42%,#15795c 0%,#0d5742 55%,#0a4232 100%);border:3px solid rgba(212,175,55,.4);border-radius:120px/70px;padding:22px 26px 26px;margin:10px auto 0;max-width:880px;box-shadow:inset 0 0 60px rgba(0,0,0,.4),0 14px 40px rgba(0,0,0,.4)}
   .opp-row{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;min-height:150px}
   .seat{text-align:center;width:150px}
@@ -164,6 +177,10 @@
         <div class="menu-card" id="goPoker">
           <div class="ic">♥</div><h3>Poker</h3>
           <p>Texas Hold'em. Play against the computer, or online with your classmates.</p>
+        </div>
+        <div class="menu-card" id="goBlackjack">
+          <div class="ic">♦</div><h3>Blackjack</h3>
+          <p>The game of 21. Beat the dealer without going over. Place your bet and play.</p>
         </div>
       </div>
     </div>
@@ -248,7 +265,53 @@
     <div class="actionbar" id="pk-actions"></div>
   </div>
 
-  <footer>The Card Room · classroom English games · Solitaire &amp; Texas Hold'em</footer>
+  <!-- ===== BLACKJACK MENU ===== -->
+  <div id="screen-bjmenu" class="screen">
+    <div class="topbar"><button class="back-btn" data-home>← Menu</button></div>
+    <header><div class="eyebrow">The Game of 21</div><h1>Choose a <span class="swatch">Blackjack</span> Mode</h1></header>
+    <div class="submenu">
+      <div class="menu-card" id="bjGoCpu"><div class="ic">🤖</div><h3>vs Computer</h3><p>Play 21 at a table with computer players, all against the dealer.</p></div>
+      <div class="menu-card" id="bjGoOnline"><div class="ic">🌐</div><h3>Online Multiplayer</h3><p>Create a room and share the code, or join a classmate's table.</p></div>
+    </div>
+    <div id="bj-cpu-setup" style="display:none;max-width:420px;margin:26px auto 0;text-align:center">
+      <div class="field" style="text-align:left"><label>Computer players at the table</label>
+        <div class="seg" style="align-self:center"><button data-bjbots="0">0</button><button data-bjbots="2" class="active">2</button><button data-bjbots="3">3</button></div>
+      </div>
+      <button class="btn gold" id="bj-cpu-start" style="margin-top:8px">Take a seat</button>
+    </div>
+    <div id="bj-online-setup" style="display:none">
+      <div class="lobby">
+        <h3>Online Blackjack</h3>
+        <div class="field"><label>Your name</label><input id="bj-mp-name" maxlength="14" placeholder="e.g. Manveru"></div>
+        <div class="lobby-actions">
+          <button class="btn gold" id="bj-mp-create">Create Room</button>
+          <button class="btn" id="bj-mp-join">Join Room</button>
+        </div>
+        <div id="bj-mp-join-box" style="display:none;margin-top:14px">
+          <div class="field"><label>Room code</label><input id="bj-mp-code" maxlength="4" placeholder="ABCD" style="text-transform:uppercase;letter-spacing:.3em;text-align:center"></div>
+          <div class="lobby-actions"><button class="btn gold" id="bj-mp-join-go">Join</button></div>
+        </div>
+        <p class="note" id="bj-mp-note">Peer-to-peer — no server needed. Everyone keeps their tab open.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BLACKJACK TABLE ===== -->
+  <div id="screen-bj" class="screen">
+    <div class="topbar"><button class="back-btn" data-home>← Menu</button></div>
+    <header><div class="eyebrow" id="bj-eyebrow">Blackjack · vs Computer</div></header>
+    <div class="pk-table bj-table">
+      <div class="bj-area">
+        <div class="bj-label">Dealer <span id="bj-dval"></span></div>
+        <div class="bj-hand" id="bj-dealer"></div>
+      </div>
+      <div class="pk-msg" id="bj-msg">Place your bet to begin.</div>
+      <div class="bj-seats" id="bj-seats"></div>
+    </div>
+    <div class="actionbar" id="bj-actions"></div>
+  </div>
+
+  <footer>The Card Room · classroom English games · Solitaire · Texas Hold'em · Blackjack</footer>
 </div>
 
 <!-- Win / result overlay (shared) -->
@@ -284,9 +347,11 @@ function freshDeck(){const d=[];for(let s=0;s<4;s++)for(let r=0;r<13;r++)d.push(
    SCREEN ROUTER
    ============================================================ */
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));document.getElementById(id).classList.add('show');window.scrollTo(0,0);}
-document.querySelectorAll('[data-home]').forEach(b=>b.addEventListener('click',()=>{ if(typeof POK!=='undefined')POK.cleanup(); showScreen('screen-home'); }));
+let ONLINE_GAME=null;
+document.querySelectorAll('[data-home]').forEach(b=>b.addEventListener('click',()=>{ if(typeof POK!=='undefined')POK.cleanup(); if(typeof BJ!=='undefined')BJ.cleanup(); showScreen('screen-home'); }));
 document.getElementById('goSolitaire').onclick=()=>{showScreen('screen-sol');SOL.deal();};
 document.getElementById('goPoker').onclick=()=>{showScreen('screen-pmenu');};
+document.getElementById('goBlackjack').onclick=()=>{showScreen('screen-bjmenu');};
 document.getElementById('goCpu').onclick=()=>{document.getElementById('cpu-setup').style.display='block';document.getElementById('online-setup').style.display='none';};
 document.getElementById('goOnline').onclick=()=>{document.getElementById('online-setup').style.display='block';document.getElementById('cpu-setup').style.display='none';};
 
@@ -629,7 +694,7 @@ const POK=(function(){
   function genCode(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
   function createRoom(name){
     if(typeof Peer==='undefined'){$('mp-note').textContent='Networking library failed to load. Check your connection and reload.';return;}
-    myName=name||'Host';room=genCode();mode='host';lobby=[{name:myName,host:true}];
+    myName=name||'Host';room=genCode();mode='host';lobby=[{name:myName,host:true}];ONLINE_GAME='poker';
     peer=new Peer('cardroom-'+room,{debug:1});
     peer.on('open',()=>{showScreen('screen-lobby');$('lobby-code').textContent=room;$('lobby-start').style.display='inline-block';renderLobby();});
     peer.on('error',e=>{$('mp-note').textContent='Connection error: '+e.type;});
@@ -649,7 +714,7 @@ const POK=(function(){
   }
   function joinRoom(name,code){
     if(typeof Peer==='undefined'){$('mp-note').textContent='Networking library failed to load. Check your connection and reload.';return;}
-    myName=name||'Player';room=code;mode='client';
+    myName=name||'Player';room=code;mode='client';ONLINE_GAME='poker';
     peer=new Peer({debug:1});
     peer.on('open',()=>{hostConn=peer.connect('cardroom-'+code,{reliable:true});
       hostConn.on('open',()=>{hostConn.send({type:'hello',name:myName});showScreen('screen-lobby');$('lobby-code').textContent=code;$('lobby-start').style.display='none';$('lobby-note').textContent='Joined! Waiting for the host to start…';});
@@ -687,8 +752,211 @@ const POK=(function(){
   $('lobby-start').onclick=startOnline;
   $('lobby-leave').onclick=()=>{cleanup();showScreen('screen-pmenu');};
 
-  return {cleanup};
+  return {cleanup,startOnline};
 })();
+
+/* ============================================================
+   BLACKJACK  (21) — multi-seat table vs dealer: CPU + online
+   ============================================================ */
+const BJ=(function(){
+  const $=id=>document.getElementById(id);
+  const START=1000, BOT_BET=50;
+  let mode='cpu',seats=[],dealer=[],deck=[],phase='bet',activeSeat=0,mySeat=0,lastMsg='',localBet=0,prevPhase='';
+  let peer=null,conns=[],hostConn=null,room='',myName='You',lobby=[];
+
+  const baseVal=r=>r===0?11:(r>=9?10:r+1);
+  function total(h){let t=0,a=0;h.forEach(c=>{t+=baseVal(c.r);if(c.r===0)a++;});while(t>21&&a>0){t-=10;a--;}return t;}
+  function isSoft(h){let t=0,a=0;h.forEach(c=>{t+=baseVal(c.r);if(c.r===0)a++;});while(t>21&&a>0){t-=10;a--;}return a>0&&t<=21&&h.some(c=>c.r===0);}
+  const isBJ=h=>h.length===2&&total(h)===21;
+  function draw(){if(deck.length<15)deck=freshDeck();return deck.pop();}
+  const msg=h=>{lastMsg=h;};
+  function blankSeat(name,kind){return {name,kind,chips:START,bet:0,betReady:false,hand:[],stand:false,busted:false,bj:false,done:false,out:false,doubled:false,result:''};}
+
+  function startCpu(nBots){
+    ONLINE_GAME=null;mode='cpu';mySeat=0;
+    seats=[blankSeat('You','me')];const names=['Ava','Beto','Caro','Diego'];
+    for(let i=0;i<nBots;i++)seats.push(blankSeat(names[i],'bot'));
+    $('bj-eyebrow').textContent='Blackjack · vs Computer';
+    showScreen('screen-bj');startBetting();
+  }
+
+  function startBetting(){
+    phase='bet';dealer=[];localBet=0;
+    seats.forEach(s=>{s.hand=[];s.stand=s.busted=s.bj=s.done=s.doubled=false;s.result='';s.bet=0;s.out=false;
+      if(s.kind==='me'&&mode==='cpu'&&s.chips<=0)s.chips=START;
+      if(s.chips<=0){s.out=true;s.betReady=true;s.bet=0;}
+      else if(s.kind==='bot'){s.bet=Math.min(BOT_BET,s.chips);s.betReady=true;}
+      else s.betReady=false;});
+    msg('Place your bet.');sync();maybeDeal();
+  }
+  function setBet(i,amount){const s=seats[i];if(phase!=='bet'||s.betReady)return;s.bet=Math.max(0,Math.min(amount,s.chips));if(s.bet<=0)return;s.betReady=true;sync();maybeDeal();}
+  function maybeDeal(){if(mode==='client')return;if(seats.every(s=>s.betReady))deal();}
+
+  function deal(){
+    const inRound=seats.filter(s=>s.bet>0&&!s.out);
+    if(inRound.length===0){msg('No bets placed.');phase='settle';sync();if(mode!=='client')setTimeout(startBetting,2200);return;}
+    deck=freshDeck();dealer=[draw(),draw()];
+    seats.forEach(s=>{if(s.bet>0&&!s.out){s.hand=[draw(),draw()];s.bj=isBJ(s.hand);if(s.bj)s.done=true;}else{s.hand=[];s.done=true;s.out=true;}});
+    if(isBJ(dealer)){phase='dealer';msg('Dealer has Blackjack.');sync();setTimeout(settle,1200);return;}
+    phase='play';activeSeat=nextPlayable(-1);
+    if(activeSeat<0){phase='dealer';sync();setTimeout(dealerTurn,800);return;}
+    sync();proceedPlay();
+  }
+  function nextPlayable(from){for(let k=from+1;k<seats.length;k++){const s=seats[k];if(s.bet>0&&!s.out&&!s.done)return k;}return -1;}
+
+  function proceedPlay(){
+    if(phase!=='play')return;
+    if(activeSeat<0||activeSeat>=seats.length)return dealerTurn();
+    const s=seats[activeSeat];
+    if(s.done||s.out||s.bet<=0){activeSeat=nextPlayable(activeSeat);if(activeSeat<0)return dealerTurn();return proceedPlay();}
+    sync();
+    if(s.kind==='bot')setTimeout(()=>botDecide(activeSeat),800);
+  }
+  function advance(){if(phase!=='play')return;activeSeat=nextPlayable(activeSeat);if(activeSeat<0)return dealerTurn();proceedPlay();}
+
+  function applyAction(i,a){
+    if(phase!=='play'||i!==activeSeat)return;const s=seats[i];if(s.done)return;
+    if(a==='hit'){s.hand.push(draw());if(total(s.hand)>21){s.busted=true;s.done=true;}}
+    else if(a==='stand'){s.stand=true;s.done=true;}
+    else if(a==='double'){if(s.hand.length===2&&s.chips>=s.bet*2){s.bet+=s.bet;s.doubled=true;s.hand.push(draw());s.done=true;if(total(s.hand)>21)s.busted=true;}}
+    if(total(s.hand)===21)s.done=true;
+    sync();
+    if(s.done)setTimeout(advance,500);
+    else if(s.kind==='bot')setTimeout(()=>botDecide(i),750);
+  }
+  function botDecide(i){
+    if(phase!=='play'||i!==activeSeat)return;const s=seats[i];
+    const t=total(s.hand),soft=isSoft(s.hand),up=dealer[0].r===0?11:baseVal(dealer[0].r);
+    let a;
+    if(t<=11)a='hit';else if(soft&&t<=17)a='hit';else if(t>=17)a='stand';else a=(up>=7)?'hit':'stand';
+    if(t===12&&up>=4&&up<=6)a='stand';
+    applyAction(i,a);
+  }
+  function dealerTurn(){phase='dealer';sync();const step=()=>{if(total(dealer)<17){dealer.push(draw());sync();setTimeout(step,650);}else settle();};setTimeout(step,600);}
+  function settle(){
+    phase='settle';const dt=total(dealer),dBJ=isBJ(dealer);
+    seats.forEach(s=>{if(s.bet<=0||s.out){s.result='';return;}
+      const pt=total(s.hand);let net=0,r='';
+      if(s.busted){net=-s.bet;r='BUST \u2212'+s.bet;}
+      else if(s.bj&&dBJ){net=0;r='PUSH';}
+      else if(s.bj){net=Math.floor(s.bet*1.5);r='BLACKJACK +'+net;}
+      else if(dBJ){net=-s.bet;r='LOSE \u2212'+s.bet;}
+      else if(dt>21){net=s.bet;r='WIN +'+s.bet;}
+      else if(pt>dt){net=s.bet;r='WIN +'+s.bet;}
+      else if(pt<dt){net=-s.bet;r='LOSE \u2212'+s.bet;}
+      else {net=0;r='PUSH';}
+      s.chips+=net;s.result=r;});
+    const me=seats[mySeat];
+    if(me&&me.bet>0&&!me.out)msg('You: '+me.result+'. Dealer had '+dt+'.');
+    else msg('Round over. Dealer had '+dt+'.');
+    sync();
+    if(mode!=='client')setTimeout(startBetting,3000);
+  }
+
+  function buildView(){
+    const reveal=(phase==='dealer'||phase==='settle');
+    return {phase,activeSeat,
+      dealer:{cards:dealer.slice(),hideHole:!reveal,total:total(dealer)},
+      seats:seats.map(s=>({name:s.name,chips:s.chips,bet:s.bet,betReady:s.betReady,out:s.out,cards:s.hand.slice(),total:total(s.hand),soft:isSoft(s.hand),bj:s.bj,busted:s.busted,done:s.done,result:s.result})),
+      msg:lastMsg};
+  }
+  function sync(){if(mode==='client')return;render(buildView());if(mode==='host')conns.forEach(c=>{if(c.seat!=null&&c.conn.open)c.conn.send({type:'view',view:buildView()});});}
+
+  function render(v){
+    prevPhase=v.phase;
+    const dh=$('bj-dealer');dh.innerHTML='';
+    v.dealer.cards.forEach((c,i)=>{const hide=v.dealer.hideHole&&i===1;dh.appendChild(cardEl(hide?{r:0,s:0}:c,!hide));});
+    $('bj-dval').textContent=v.dealer.cards.length?(v.dealer.hideHole?'· ?':'· '+v.dealer.total):'';
+    $('bj-msg').innerHTML=v.msg||'';
+    const host=$('bj-seats');host.innerHTML='';
+    v.seats.forEach((s,i)=>{
+      const seat=document.createElement('div');
+      seat.className='seat'+(s.busted?' folded':'')+(v.activeSeat===i&&v.phase==='play'?' active':'');
+      const youTag=i===mySeat?' (You)':'';
+      const st=s.result||(s.bj?'Blackjack':'')||(s.busted?'Bust':'')||(s.out?'Sitting out':'');
+      seat.innerHTML='<div class="who">'+s.name+youTag+'</div><div class="stack">Chips: '+s.chips+'</div><div class="cards"></div><div class="bet">'+(s.bet>0?'Bet <b>'+s.bet+'</b>':'&nbsp;')+(s.cards.length?' · '+s.total+(s.soft?' (soft)':''):'')+'</div><div class="status">'+(st||'&nbsp;')+'</div>';
+      const cd=seat.querySelector('.cards');cd.style.justifyContent='center';
+      s.cards.forEach(c=>cd.appendChild(cardEl(c,true)));
+      host.appendChild(seat);
+    });
+    renderActions(v);
+  }
+  function mkBtn(t,fn,cls){const b=document.createElement('button');b.className=cls||'btn';b.textContent=t;b.onclick=fn;return b;}
+  function renderActions(v){
+    const bar=$('bj-actions');bar.innerHTML='';
+    const me=v.seats[mySeat];if(!me)return;
+    if(v.phase==='bet'){
+      if(me.out){bar.innerHTML='<span class="note">You are sitting out (no chips).</span>';return;}
+      if(me.betReady){bar.innerHTML='<span class="note">Bet placed — waiting for other players…</span>';return;}
+      [10,25,100].forEach(val=>{const c=document.createElement('button');c.className='chip';c.textContent='+'+val;c.onclick=()=>{if(localBet+val<=me.chips){localBet+=val;updateBetLabel();}};bar.appendChild(c);});
+      bar.appendChild(mkBtn('Clear',()=>{localBet=0;updateBetLabel();},'btn'));
+      const lbl=document.createElement('span');lbl.id='bj-betlabel';lbl.style.cssText='color:var(--gold);font-weight:700;margin:0 6px';lbl.textContent='Bet: '+localBet;bar.appendChild(lbl);
+      bar.appendChild(mkBtn('Place Bet',()=>{if(localBet>0)confirmBet();},'btn gold'));
+    } else if(v.phase==='play'&&v.activeSeat===mySeat){
+      bar.appendChild(mkBtn('Hit',()=>sendAct('hit'),'btn gold'));
+      bar.appendChild(mkBtn('Stand',()=>sendAct('stand'),'btn'));
+      if(me.cards.length===2&&me.chips>=me.bet*2)bar.appendChild(mkBtn('Double Down',()=>sendAct('double'),'btn'));
+    } else if(v.phase==='play'){
+      bar.innerHTML='<span class="note">Waiting for '+v.seats[v.activeSeat].name+'…</span>';
+    }
+  }
+  function updateBetLabel(){const l=$('bj-betlabel');if(l)l.textContent='Bet: '+localBet;}
+  function confirmBet(){if(mode==='client'){if(hostConn&&hostConn.open)hostConn.send({type:'bet',amount:localBet});$('bj-actions').innerHTML='<span class="note">Bet placed — waiting…</span>';}else setBet(mySeat,localBet);}
+  function sendAct(a){if(mode==='client'){if(hostConn&&hostConn.open)hostConn.send({type:'act',action:a});$('bj-actions').innerHTML='';}else applyAction(mySeat,a);}
+
+  function genCode(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
+  function createRoom(name){
+    if(typeof Peer==='undefined'){$('bj-mp-note').textContent='Networking library failed to load. Reload and try again.';return;}
+    myName=name||'Host';room=genCode();mode='host';ONLINE_GAME='blackjack';lobby=[{name:myName,host:true}];conns=[];
+    peer=new Peer('cardbj-'+room,{debug:1});
+    peer.on('open',()=>{showScreen('screen-lobby');$('lobby-code').textContent=room;$('lobby-start').style.display='inline-block';renderLobby();});
+    peer.on('error',e=>{$('bj-mp-note').textContent='Connection error: '+e.type;});
+    peer.on('connection',conn=>{conn.on('data',m=>hostMsg(conn,m));conn.on('close',()=>{lobby=lobby.filter(l=>l.connId!==conn.peer);conns=conns.filter(c=>c.conn!==conn);renderLobby();});});
+  }
+  function hostMsg(conn,m){
+    if(m.type==='hello'){if(!conns.find(c=>c.conn===conn)){conns.push({conn,seat:null,name:m.name});lobby.push({name:m.name,connId:conn.peer});renderLobby();conn.send({type:'lobby',players:lobby.map(l=>l.name)});}}
+    else if(m.type==='bet'){const c=conns.find(x=>x.conn===conn);if(c&&c.seat!=null)setBet(c.seat,m.amount);}
+    else if(m.type==='act'){const c=conns.find(x=>x.conn===conn);if(c&&c.seat!=null)applyAction(c.seat,m.action);}
+  }
+  function joinRoom(name,code){
+    if(typeof Peer==='undefined'){$('bj-mp-note').textContent='Networking library failed to load. Reload and try again.';return;}
+    myName=name||'Player';room=code;mode='client';ONLINE_GAME='blackjack';
+    peer=new Peer({debug:1});
+    peer.on('open',()=>{hostConn=peer.connect('cardbj-'+code,{reliable:true});
+      hostConn.on('open',()=>{hostConn.send({type:'hello',name:myName});showScreen('screen-lobby');$('lobby-code').textContent=code;$('lobby-start').style.display='none';$('lobby-note').textContent='Joined! Waiting for the host to start…';});
+      hostConn.on('data',clientMsg);});
+    peer.on('error',e=>{showScreen('screen-bjmenu');$('bj-mp-note').textContent='Could not join: '+e.type+'. Check the code.';});
+  }
+  function clientMsg(m){
+    if(m.type==='lobby')renderLobbyClient(m.players);
+    else if(m.type==='start'){mySeat=m.yourSeat;$('bj-eyebrow').textContent='Blackjack · Online';showScreen('screen-bj');}
+    else if(m.type==='view'){if(m.view.phase==='bet'&&prevPhase!=='bet')localBet=0;render(m.view);}
+  }
+  function renderLobby(){const ul=$('lobby-players');ul.innerHTML='';lobby.forEach(l=>{const li=document.createElement('li');li.innerHTML='<span>'+l.name+'</span><span class="tag">'+(l.host?'host':'ready')+'</span>';ul.appendChild(li);});$('lobby-note').textContent=lobby.length<2?'Waiting for players to join…':'Ready when you are.';}
+  function renderLobbyClient(names){const ul=$('lobby-players');ul.innerHTML='';names.forEach((n,i)=>{const li=document.createElement('li');li.innerHTML='<span>'+n+'</span><span class="tag">'+(i===0?'host':'player')+'</span>';ul.appendChild(li);});}
+  function startOnline(){
+    seats=[blankSeat(myName,'me')];mySeat=0;
+    conns.forEach(c=>{c.seat=seats.length;seats.push(blankSeat(c.name,'remote'));});
+    conns.forEach(c=>{if(c.conn.open)c.conn.send({type:'start',yourSeat:c.seat});});
+    $('bj-eyebrow').textContent='Blackjack · Online (host)';showScreen('screen-bj');startBetting();
+  }
+  function cleanup(){phase='bet';try{conns.forEach(c=>c.conn&&c.conn.close());}catch(e){}try{if(hostConn)hostConn.close();}catch(e){}try{if(peer)peer.destroy();}catch(e){}conns=[];hostConn=null;peer=null;lobby=[];mode='cpu';}
+
+  let bjBots=2;
+  document.querySelectorAll('#bj-cpu-setup [data-bjbots]').forEach(b=>b.onclick=()=>{document.querySelectorAll('#bj-cpu-setup [data-bjbots]').forEach(x=>x.classList.remove('active'));b.classList.add('active');bjBots=+b.dataset.bjbots;});
+  $('bjGoCpu').onclick=()=>{$('bj-cpu-setup').style.display='block';$('bj-online-setup').style.display='none';};
+  $('bjGoOnline').onclick=()=>{$('bj-online-setup').style.display='block';$('bj-cpu-setup').style.display='none';};
+  $('bj-cpu-start').onclick=()=>startCpu(bjBots);
+  $('bj-mp-create').onclick=()=>createRoom($('bj-mp-name').value.trim());
+  $('bj-mp-join').onclick=()=>{$('bj-mp-join-box').style.display='block';};
+  $('bj-mp-join-go').onclick=()=>joinRoom($('bj-mp-name').value.trim(),$('bj-mp-code').value.trim().toUpperCase());
+
+  return {startCpu,createRoom,joinRoom,startOnline,cleanup};
+})();
+
+/* ----- shared online lobby dispatch ----- */
+document.getElementById('lobby-start').onclick=()=>{ if(ONLINE_GAME==='blackjack')BJ.startOnline(); else POK.startOnline(); };
+document.getElementById('lobby-leave').onclick=()=>{ if(ONLINE_GAME==='blackjack'){BJ.cleanup();showScreen('screen-bjmenu');} else {POK.cleanup();showScreen('screen-pmenu');} };
 </script>
 </body>
 </html>
